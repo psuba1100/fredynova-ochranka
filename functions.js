@@ -44,6 +44,7 @@ async function spamCheck(msg, set, time) {
                         try{
 
                             const adata = await antispam.findOne({idd: '1'})
+                            if(adata == null) adata = {timeoutTime: 0}
                             msg.member.timeout(adata.timeoutTime || 0)
 
                             data.warns++

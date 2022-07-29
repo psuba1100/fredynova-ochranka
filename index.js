@@ -1,6 +1,7 @@
 //
 //	Imports
 //
+const antispam = require('./models/antispam')
 const { MONGODB_SRV, token } = require('./config.json');
 const { MessageEmbed } = require('discord.js');
 const bannedWords = require('./models/bannedWords')
@@ -9,7 +10,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Intents } = require('discord.js');
 const mongoose = require('mongoose')
-require('dotenv').config()
 function wait(ms) {
 	return new Promise((resolve) => {
 	  setTimeout(resolve, ms);
@@ -55,6 +55,8 @@ client.once('ready', () => {
 
 
 client.on('messageCreate', async message => {
+	if (message.member.user.bot === true) return
+	if (message.member.permissions.has('ADMINISTRATOR')) return
     const data = await bannedWords.findOne({idd: '1'})
     for (var i = 0; i < data.word.length; i++) {
 		const m = message.content.toLowerCase()
@@ -78,15 +80,15 @@ let set = new Set()
 
 // fire the message event
 client.on('messageCreate', msg => {
-    // if the user is a bot then exit
+	let data3
+	try {
+		data3 = antispam.findOne({idd:'1'})
+	} catch (error) {}
+	if(data3.checkTime == null || undefined) data3.checkTime = 5000
     if (msg.member.user.bot === true) return
-
-    // require the functions file which we will be getting our function from
+	if (msg.member.permissions.has('ADMINISTRATOR')) return
     const functions = require('./functions')
-
-    // use the function: spamCheck(the message, the object of the Set() class, amount of ms)
-    // if you put 1000 ms, then it will wait 1 full second. if there are 5 messages in one second from 1 member, then it will run some code.
-    functions.spamCheck(msg, set, 10000)
+    functions.spamCheck(msg, set, data3.checkTime)
 })
 
 //
