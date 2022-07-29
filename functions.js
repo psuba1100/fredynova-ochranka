@@ -2,7 +2,7 @@ const { MessageEmbed } = require('discord.js');
 const warns = require('./models/warns')
 const antispam = require('./models/antispam')
 
-function spamCheck(msg, set, time) {
+async function spamCheck(msg, set, time) {
     // go through every user in the set Object
     for (let u of set) {
         
@@ -11,42 +11,91 @@ function spamCheck(msg, set, time) {
             if (u.times >= 4) {
 
                 try {
+
                     const data = await warns.findOne({ user: msg.author.id})
 
                     if(data.spam == 0){
+
                         msg.reply({embeds:[
                             new MessageEmbed()
                             .setColor('#fc1303')
                             .setTitle('bitte nicht so schnell!')
                             .setDescription(`Vyzerá to na spam a ten je na tomto servery zakázaný! Porušenie tohto pravidla povedie k warnu!`)
                             .setTimestamp()
-                            .setAuthor({ name: msg.author.tag, iconURL: msg.user.displayAvatarURL() })
+                            .setAuthor({ name: msg.author.tag, iconURL: msg.author.displayAvatarURL() })
                         ]})
+
+                        data.spam = 1
+                        await data.save()
+
+                        u.time = Date.now()
+                        u.times = 0
 
                         return
                     }
                     else{
-                        data.spam = 0
-                        data.save()
-
-                        msg.member.timeout(0)
-
                         // reset set Object
-                        u.time = Date.now()
+                        u.time = Date.now
                         u.times = 0
 
-                        await msg.reply({embeds:[
-                            new MessageEmbed()
-                                .setColor('#ffb300')
-                                .setTitle('Udelený warn')
-                                .setDescription(`Používateľ ${msg.author.tag} spamoval. Používateľovi bol udelení warn!`)
-                                .setTimestamp()
-                                .setAuthor({ name: msg.author.tag, iconURL: msg.author.displayAvatarURL()})
-                        ]})
+                        data.spam = 0
+                        await data.save()
+
+                        try{
+
+                            const adata = await antispam.findOne({idd: '1'})
+                            msg.member.timeout(adata.timeoutTime || 0)
+
+                            data.warns++
+                            data.save()
+
+    
+                            await msg.reply({embeds:[
+                                new MessageEmbed()
+                                    .setColor('#ffb300')
+                                    .setTitle('Udelený warn')
+                                    .setDescription(`Používateľ ${msg.author.tag} spamoval. Používateľovi bol udelení warn!`)
+                                    .setTimestamp()
+                                    .setAuthor({ name: msg.author.tag, iconURL: msg.author.displayAvatarURL()})
+                            ]})
+                            return
+                        }catch(e){
+                            data.warns++
+                            data.save()
+                           
+
+                            await msg.reply({embeds:[
+                                new MessageEmbed()
+                                    .setColor('#ffb300')
+                                    .setTitle('Udelený warn')
+                                    .setDescription(`Používateľ ${msg.author.tag} spamoval. Používateľovi bol udelení warn!`)
+                                    .setTimestamp()
+                                    .setAuthor({ name: msg.author.tag, iconURL: msg.author.displayAvatarURL()})
+                            ]})
+                            return
+                        }
                     }
 
                 } catch (e) {
-                    await warns.create()
+                    // reset set Object
+                    u.time = Date.now
+                    u.times = 0
+                    
+                    let uwu = await warns.create({
+                        user: msg.author.id,
+                        warns: 0,
+                        spam: 1
+                    })
+                    await uwu.save()
+
+                    msg.reply({embeds:[
+                        new MessageEmbed()
+                        .setColor('#fc1303')
+                        .setTitle('bitte nicht so schnell!')
+                        .setDescription(`Vyzerá to na spam a ten je na tomto servery zakázaný! Porušenie tohto pravidla povedie k warnu!`)
+                        .setTimestamp()
+                        .setAuthor({ name: msg.author.tag, iconURL: msg.author.displayAvatarURL() })
+                    ]})
                     
                 }
                 
